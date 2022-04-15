@@ -21,9 +21,7 @@ typedef struct term_bridge_t{
 						 *next;
 
 	size_t id;
-	uint8_t chunksize_e;
-
-	uint8_t seq_num;
+	uint8_t chunksize;
 
 	term_itf_t *term;
 	term_err_t terr;
@@ -31,7 +29,7 @@ typedef struct term_bridge_t{
 
 
 /* prototypes */
-void term_bridge_init(term_bridge_t *brdg, size_t id, term_itf_t *term, uint8_t chunksize_e);
+void term_bridge_init(term_bridge_t *brdg, size_t id, term_itf_t *term, uint8_t chunksize);
 
 int16_t term_bridge_read(term_bridge_t *brdg, void *data, uint8_t n);
 int16_t term_bridge_write(term_bridge_t *brdg, void const *data, uint8_t n);

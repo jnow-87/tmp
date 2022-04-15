@@ -17,7 +17,6 @@
 //#define DEBUG(fmt, ...)	{}
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
-#define CHUNKSIZE(cs)	(0x1 << (cs))
 
 #define CHUNKS(n, cs)({ \
 	uint8_t x; \
@@ -45,40 +44,38 @@ int16_t term_bridge_read(term_bridge_t *brdg, void *data, uint8_t n){
 	uint8_t i,
 			b,
 			chunks,
-			chunksize,
 			csum;
 
 
 	// read control byte
-	if(read(brdg, &b, 1, (uint8_t []){ ((brdg->seq_num << 3) | brdg->chunksize_e) }) != 0)
-		goto err;
+	if(read(brdg, &b, 1, (uint8_t []){ brdg->chunksize }) != 0)
+		return -1;
 
 	DEBUG("control byte %#hhx\n", b);
 
 	// read data length
 	if(read(brdg, &b, 1, 0x0) != 0 || b > n)
-		goto err;
+		return -1;
 
 	n = b;
 	DEBUG("len %#hhx\n", n);
 
 	// read checksum
 	if(read(brdg, &csum, 1, 0x0) != 0)
-		goto err;
+		return -1;
 
 	DEBUG("checksum %#hhx\n", csum);
 
 	// read data
-	chunksize = CHUNKSIZE(brdg->chunksize_e);
-	chunks = CHUNKS(n, chunksize);
-	DEBUG("payload: cs %u, chunks %u\n", chunksize, chunks);
+	chunks = CHUNKS(n, brdg->chunksize);
+	DEBUG("payload: cs %u, chunks %u\n", brdg->chunksize, chunks);
 
 	for(i=0; i<chunks; i++){
-		if(read(brdg, data + i * chunksize, MIN(chunksize, n - (i * chunksize)), 0x0) != 0)
-			goto err;
+		if(read(brdg, data + i * brdg->chunksize, MIN(brdg->chunksize, n - (i * brdg->chunksize)), 0x0) != 0)
+			return -1;
 
-		for(uint8_t j=0; j<MIN(chunksize, n - (i * chunksize)); j++)
-			DEBUG("data %#hhx\n", ((char*)data)[i * chunksize + j]);
+		for(uint8_t j=0; j<MIN(brdg->chunksize, n - (i * brdg->chunksize)); j++)
+			DEBUG("data %#hhx\n", ((char*)data)[i * brdg->chunksize + j]);
 	}
 
 	// verify and acknowledge checksum
@@ -86,75 +83,59 @@ int16_t term_bridge_read(term_bridge_t *brdg, void *data, uint8_t n){
 	DEBUG("verify %#hhx\n", b);
 
 	if(write(brdg, &b, 1) != 0 || b != csum)
-		goto err;
+		return -1;
 
-	brdg->seq_num++;
 	DEBUG("read complete\n");
 
 	return n;
-
-
-err:
-	brdg->seq_num = 0;
-
-	return -1;
 }
 
 int16_t term_bridge_write(term_bridge_t *brdg, void const *data, uint8_t n){
 	uint8_t i,
 			chunks,
-			chunksize,
 			csum;
 
 
 	// write control byte
-	DEBUG("control byte %#hhx\n", ((brdg->seq_num << 3) | brdg->chunksize_e));
+	DEBUG("control byte %#hhx\n", brdg->chunksize);
 
-	if(write(brdg, (uint8_t []){ ((brdg->seq_num << 3) | brdg->chunksize_e) }, 1) != 0)
-		goto err;
+	if(write(brdg, (uint8_t []){ brdg->chunksize }, 1) != 0)
+		return -1;
 
 	// write data length
 	DEBUG("len %#hhx\n", n);
 
 	if(write(brdg, &n, 1) != 0)
-		goto err;
+		return -1;
 
 	// write checksum
 	csum = checksum(data, n);
 	DEBUG("checksum %#hhx\n", csum);
 
 	if(write(brdg, &csum, 1) != 0)
-		goto err;
+		return -1;
 
 	// write data
-	chunksize = CHUNKSIZE(brdg->chunksize_e);
-	chunks = CHUNKS(n, chunksize);
-	DEBUG("payload: cs %u, chunks %u\n", chunksize, chunks);
+	chunks = CHUNKS(n, brdg->chunksize);
+	DEBUG("payload: cs %u, chunks %u\n", brdg->chunksize, chunks);
 
 	for(i=0; i<chunks; i++){
-		for(uint8_t j=0; j<MIN(chunksize, n - (i * chunksize)); j++)
-			DEBUG("data %#hhx\n", ((char*)data)[i * chunksize + j]);
+		for(uint8_t j=0; j<MIN(brdg->chunksize, n - (i * brdg->chunksize)); j++)
+			DEBUG("data %#hhx\n", ((char*)data)[i * brdg->chunksize + j]);
 
-		if(write(brdg, data + i * chunksize, MIN(chunksize, n - (i * chunksize))) != 0)
-			goto err;
+		if(write(brdg, data + i * brdg->chunksize, MIN(brdg->chunksize, n - (i * brdg->chunksize))) != 0)
+			return -1;
 	}
 
 	// read acknowledge
 	DEBUG("verify %#hhx\n", csum);
 
 	if(read(brdg, &i, 1, &csum) != 0)
-		goto err;
+		return -1;
 
-	brdg->seq_num++;
 	DEBUG("write complete\n");
 
 	return n;
-
-
-err:
-	brdg->seq_num = 0;
-
-	return -1;
 }
 
 
@@ -187,6 +168,8 @@ static int read(term_bridge_t *brdg, uint8_t *data, uint8_t n, uint8_t *expect){
 			DEBUG("read error\n");
 			return nack(brdg, data[i]);
 		}
+
+		DEBUG("read n=%u, %#hhx/~%#hhx\n", r, data[i], ~data[i]);
 	}
 
 	if(expect != 0x0){
@@ -209,6 +192,7 @@ static int write(term_bridge_t *brdg, uint8_t const *data, uint8_t n){
 
 	term = brdg->term;
 
+	DEBUG("write n=%u, %#hhx/~%#hhx\n", n, data[0], ~data[0]);
 	r = term->puts((char const*)data, n, term->data);
 
 	if(term->gets((char*)&c, 1, &brdg->terr, term->data) != 1 || brdg->terr){
@@ -216,10 +200,11 @@ static int write(term_bridge_t *brdg, uint8_t const *data, uint8_t n){
 		return -1;
 	}
 
+	DEBUG("read %#hhx/~%#hhx\n", c, ~c);
 	c = ~c;
 
 	if(r != n || c != data[n - 1]){
-		DEBUG("ack failed len %#hhx -- %#hhx, data %#hhx -- %#hhx\n", (uint8_t)r, n, c, data[n - 1]);
+		DEBUG("ack failed: len %#hhx ?= %#hhx, data %#hhx ?= %#hhx\n", (uint8_t)r, n, c, data[n - 1]);
 		return -1;
 	}
 
@@ -229,14 +214,15 @@ static int write(term_bridge_t *brdg, uint8_t const *data, uint8_t n){
 static int ack(term_bridge_t *brdg, uint8_t byte){
 	uint8_t x;
 
+	DEBUG("write ack %#hhx/~%#hhx\n", ~byte, byte);
 	x = brdg->term->putc(~byte, brdg->term->data);
 
 	if(x == (uint8_t)~byte){
-		DEBUG("ack success %#hhx (%#hhx)\n", byte, ~byte);
+		DEBUG("ack success %#hhx/~%#hhx\n", byte, ~byte);
 		return 0;
 	}
 
-	DEBUG("ack failed %#hhx %#hhx\n", x, ~byte);
+	DEBUG("ack failed %#hhx != %#hhx\n", x, ~byte);
 	return -1;
 //	return brdg->term->putc(~byte, brdg->term->data) == ~byte ? 0 : -1;
 }

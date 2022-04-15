@@ -13,10 +13,10 @@
 
 
 /* global functions */
-void term_bridge_init(term_bridge_t *brdg, size_t id, term_itf_t *term, uint8_t chunksize_e){
+void term_bridge_init(term_bridge_t *brdg, size_t id, term_itf_t *term, uint8_t chunksize){
 	memset(brdg, 0, sizeof(term_bridge_t));
 
 	brdg->id = id;
-	brdg->chunksize_e = chunksize_e;
+	brdg->chunksize = chunksize;
 	brdg->term = term;
 }

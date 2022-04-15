@@ -13,7 +13,7 @@
 
 
 /* macros */
-#define CHUNKSIZE_E	1
+#define CHUNKSIZE	2
 
 
 /* local/static prototypes */
@@ -67,7 +67,7 @@ int main(void){
 	titf.tx_int = 0;
 	titf.cfg_size = 0;
 
-	term_bridge_init(&brdg, 0, &titf, CHUNKSIZE_E);
+	term_bridge_init(&brdg, 0, &titf, CHUNKSIZE);
 
 	/* main */
 	user(term, &brdg);
