@@ -1,0 +1,31 @@
+#: bw a
+control byte 0x2
+len 0x1
+checksum 0x9f
+payload: cs 2, chunks 1
+data 0x61
+verify 0x9f
+ack success 0x9f (0x60)
+write complete
+written: 1
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+
+::: read dev/b0 1
+[DBG]     driver/bridge/dgram.c:56    dgram_read              ctrl byte: read 0x2
+[DBG]     driver/bridge/dgram.c:237   ack                     ack byte 0x2, send 0xfd
+[DBG]     driver/bridge/dgram.c:59    dgram_read              ctrl byte ack
+[DBG]     driver/bridge/dgram.c:56    dgram_read              data len: read 0x1
+[DBG]     driver/bridge/dgram.c:237   ack                     ack byte 0x1, send 0xfe
+[DBG]     driver/bridge/dgram.c:59    dgram_read              data len ack
+[DBG]     driver/bridge/dgram.c:56    dgram_read              checksum: read 0x9f
+[DBG]     driver/bridge/dgram.c:237   ack                     ack byte 0x9f, send 0x60
+[DBG]     driver/bridge/dgram.c:59    dgram_read              checksum ack
+[DBG]     driver/bridge/dgram.c:56    dgram_read              data: read 0x61
+[DBG]     driver/bridge/dgram.c:237   ack                     ack byte 0x61, send 0x9e
+[DBG]     driver/bridge/dgram.c:59    dgram_read              data ack
+[DBG]     driver/bridge/dgram.c:112   dgram_read              send checksum 0x9f
+[DBG]     driver/bridge/dgram.c:59    dgram_read              verify ack
+[DBG]     driver/bridge/dgram.c:56    dgram_read              verify tx: read 0x60
+return value: 1
+61 a

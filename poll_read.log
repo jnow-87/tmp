@@ -1,0 +1,44 @@
+#: br 3
+bridge read 3 bytes
+ack success 0x2 (0xfd)
+control byte 0x2
+ack success 0x3 (0xfc)
+len 0x3
+ack success 0xcb (0x34)
+checksum 0xcb
+payload: cs 2, chunks 2
+ack success 0x61 (0x9e)
+data 0x62
+data 0x61
+ack success 0x72 (0x8d)
+data 0x72
+verify 0xcb
+read complete
+read: 3 "bar"
+
+─────────────────────────────────────────────────────────────────────────────────────────────────
+::: echo -n bar > dev/b0
+[DBG]     driver/bridge/dgram.c:145   dgram_write             ctrl byte
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0x2
+[DBG]     driver/bridge/dgram.c:145   dgram_write             ctrl byte tx
+[DBG]     driver/bridge/dgram.c:142   dgram_write             ctrl byte ack: read 0xfd
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data len
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0x3
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data len tx
+[DBG]     driver/bridge/dgram.c:142   dgram_write             data len ack: read 0xfc
+[DBG]     driver/bridge/dgram.c:145   dgram_write             checksum
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0xcb
+[DBG]     driver/bridge/dgram.c:145   dgram_write             checksum tx
+[DBG]     driver/bridge/dgram.c:142   dgram_write             checksum ack: read 0x34
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0x62
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0x61
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data tx
+[DBG]     driver/bridge/dgram.c:142   dgram_write             data ack: read 0x9e
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data
+[DBG]     driver/bridge/dgram.c:223   tx                      write 0x72
+[DBG]     driver/bridge/dgram.c:145   dgram_write             data tx
+[DBG]     driver/bridge/dgram.c:142   dgram_write             data ack: read 0x8d
+[DBG]     driver/bridge/dgram.c:142   dgram_write             verify ack: read 0xcb
+[DBG]     driver/bridge/dgram.c:237   ack                     ack byte 0xcb, send 0x34
