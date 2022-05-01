@@ -80,10 +80,15 @@ int16_t term_bridge_read(term_bridge_t *brdg, void *data, uint8_t n){
 
 	// verify and acknowledge checksum
 	b = checksum(data, n);
-	DEBUG("verify %#hhx\n", b);
+	DEBUG("verify checksum %#hhx\n", b);
 
-	if(write(brdg, &b, 1) != 0 || b != csum)
+	if(write(brdg, &b, 1) != 0)
 		return -1;
+
+	if(b != csum){
+		DEBUG("checksum mismatch: %hhx != %hhx\n", b, csum);
+		return -1;
+	}
 
 	DEBUG("read complete\n");
 
@@ -164,12 +169,12 @@ static int read(term_bridge_t *brdg, uint8_t *data, uint8_t n, uint8_t *expect){
 	for(i=0; i<n; i+=r){
 		r = term->gets((char*)data + i, n - i, &brdg->terr, term->data);
 
-		if(r == 0 || brdg->terr){
+		if(r <= 0 || brdg->terr){
 			DEBUG("read error\n");
-			return nack(brdg, data[i]);
+			return -1;
 		}
 
-		DEBUG("read n=%u, %#hhx/~%#hhx\n", r, data[i], ~data[i]);
+		DEBUG("read n=%d, %#hhx/~%#hhx\n", r, data[i], ~data[i]);
 	}
 
 	if(expect != 0x0){
@@ -194,6 +199,9 @@ static int write(term_bridge_t *brdg, uint8_t const *data, uint8_t n){
 
 	DEBUG("write n=%u, %#hhx/~%#hhx\n", n, data[0], ~data[0]);
 	r = term->puts((char const*)data, n, term->data);
+
+	if(r < 0)
+		return -1;
 
 	if(term->gets((char*)&c, 1, &brdg->terr, term->data) != 1 || brdg->terr){
 		DEBUG("read ack failed\n");

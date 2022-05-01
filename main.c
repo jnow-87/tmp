@@ -9,6 +9,7 @@
 #include <termios.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <sys/errno.h>
 #include "termbridge.h"
 
 
@@ -215,7 +216,15 @@ static size_t term_puts(char const *s, size_t n, void *data){
 }
 
 static size_t term_gets(char *s, size_t n, term_err_t *err, void *data){
+	ssize_t r;
+
+
 	*err = TERR_NONE;
 
-	return read(*((int*)data), s, n);
+	r = read(*((int*)data), s, n);
+
+	if(r < 0)
+		*err = TERR_FRAME;
+
+	return r;
 }
